@@ -43,10 +43,11 @@ public class Biblioteca {
                     .type(MediaType.TEXT_PLAIN)
                     .build();
         
-        return aggiungiLibroCorretto(l);
+        URI uriLibro = aggiungiLibroCorretto(l);
+        return Response.created(uriLibro).build();
     }
     
-    private Response aggiungiLibroCorretto(Libro l) {
+    private URI aggiungiLibroCorretto(Libro l) {
         // Se il libro ha "descrizione" non vuota
         if (l.getDescrizione().length() != 0)
             // lo aggiunge direttamente in "libri"
@@ -67,7 +68,7 @@ public class Biblioteca {
         URI uriLibro = UriBuilder.fromResource(Biblioteca.class)
                         .path(l.getISBN())
                         .build();
-        return Response.created(uriLibro).build();
+        return uriLibro;
     }
     
     // Metodo privato per recuperare l'indice del libro avente "isbn"
@@ -124,7 +125,8 @@ public class Biblioteca {
         // Se entrambi i controlli precedenti sono passati, procede 
         // all'aggiornamento del libro
         this.libri.remove(i);
-        return aggiungiLibroCorretto(l);
+        URI uriLibro = aggiungiLibroCorretto(l);
+        return Response.ok(uriLibro).build();
         
     }
     
