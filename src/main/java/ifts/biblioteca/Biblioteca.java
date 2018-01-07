@@ -1,5 +1,6 @@
 package ifts.biblioteca;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import javax.ws.rs.Consumes;
@@ -11,6 +12,8 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriBuilder;
 
 @Path("/biblioteca")
 public class Biblioteca {
@@ -25,7 +28,25 @@ public class Biblioteca {
     
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
-    public void aggiungiLibro(Libro l) {
+    public Response aggiungiLibro(Libro l) {
+        // Verifica che l'ISBN del libro non sia vuoto
+        if(l.getISBN().length() == 0)
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("L'ISBN non può essere vuoto.")
+                    .type(MediaType.TEXT_PLAIN)
+                    .build();
+        
+        // Verifica se il libro è già presente nella collezione
+        if(indiceLibro(l.getISBN()) >= 0) 
+            return Response.status(Response.Status.CONFLICT)
+                    .entity(l.getISBN() + " già presente.")
+                    .type(MediaType.TEXT_PLAIN)
+                    .build();
+        
+        return aggiungiLibroCorretto(l);
+    }
+    
+    private Response aggiungiLibroCorretto(Libro l) {
         // Se il libro ha "descrizione" non vuota
         if (l.getDescrizione().length() != 0)
             // lo aggiunge direttamente in "libri"
@@ -41,6 +62,12 @@ public class Biblioteca {
             );
             this.libri.add(l1);
         }
+        
+        // Crea la URI corrispondente al libro aggiunto 
+        URI uriLibro = UriBuilder.fromResource(Biblioteca.class)
+                        .path(l.getISBN())
+                        .build();
+        return Response.created(uriLibro).build();
     }
     
     // Metodo privato per recuperare l'indice del libro avente "isbn"
@@ -55,43 +82,71 @@ public class Biblioteca {
     @GET
     @Path("/{isbn}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Libro recuperaLibro(@PathParam("isbn") String isbn) {
+    public Response recuperaLibro(@PathParam("isbn") String isbn) {
         // Recupera la posizione "i" del libro con "isbn" specificato
         int i = indiceLibro(isbn);
-        // Restituisce il libro, se c'è
-        if(i>-1)
-            return this.libri.get(i);
-        // Altrimenti restituisce "null"
-        return null;
+        
+        // Se il libro non è presente, restituisce 404
+        if(i==-1)
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity(isbn + " non presente.")
+                    .type(MediaType.TEXT_PLAIN)
+                    .build();
+        
+        // Altrimenti, restituisce il libro
+        return Response.ok().entity(libri.get(i)).build();
     }
     
     @PUT
     @Path("/{isbn}")
     @Consumes(MediaType.APPLICATION_JSON)
-    public void aggiornaLibro(
+    public Response aggiornaLibro(
             @PathParam("isbn") String isbn,
             Libro l
     ) {
         // Recupera l'indice in "libri" del libro con "isbn" indicato 
         int i = indiceLibro(isbn);
-        // Se il libro è presente
-        if (i>-1) {
-            // elimina la vecchia descrizione del libro
-            this.libri.remove(i);
-            // e ne aggiunge la nuova
-            aggiungiLibro(l);
-        }
+        
+        // Se il libro non è presente, restituisce 404
+        if(i==-1)
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity(isbn + " non presente.")
+                    .type(MediaType.TEXT_PLAIN)
+                    .build();
+        
+        // Verifica che il nuovo ISBN non sia vuoto
+        if(l.getISBN().length() == 0)
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("L'ISBN non può essere vuoto.")
+                    .type(MediaType.TEXT_PLAIN)
+                    .build();
+        
+        // Se entrambi i controlli precedenti sono passati, procede 
+        // all'aggiornamento del libro
+        this.libri.remove(i);
+        return aggiungiLibroCorretto(l);
+        
     }
     
     @DELETE
     @Path("/{isbn}")
-    public void eliminaLibro(@PathParam("isbn") String isbn) {
+    public Response eliminaLibro(@PathParam("isbn") String isbn) {
         // Recupera l'indice in "libri" del libro con "isbn" indicato 
         int i = indiceLibro(isbn);
-        // Se il libro è presente
-        if (i>-1)
-            // elimina la vecchia descrizione del libro
-            this.libri.remove(i);
+
+        // Se il libro non è presente, restituisce 404
+        if(i==-1)
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity(isbn + " non presente.")
+                    .type(MediaType.TEXT_PLAIN)
+                    .build();
+        
+        // Altrimenti, elimina il libro
+        libri.remove(i);
+        return Response.ok()
+                    .entity(isbn + " eliminato.")
+                    .type(MediaType.TEXT_PLAIN)
+                    .build();
         
     }
     
