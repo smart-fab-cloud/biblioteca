@@ -3,6 +3,6 @@ server:
   applicationContextPath: /
   connector:
     type: http
-    port: 50005
+    port: 50004
 
 descrizionePredefinita: "n.d."
