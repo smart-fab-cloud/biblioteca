@@ -101,6 +101,7 @@ public class Biblioteca {
     @PUT
     @Path("/{isbn}")
     @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
     public Response aggiornaLibro(
             @PathParam("isbn") String isbn,
             Libro l
